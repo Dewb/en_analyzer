@@ -12,7 +12,7 @@
 #include <curl/curl.h>
 #include <curl/types.h>
 #include <curl/easy.h>
-#include <openssl/md5.h>
+#include <CommonCrypto/CommonDigest.h>
 #include <json/json.h>
 #include <sndfile.h>
 
@@ -203,10 +203,16 @@ void en_analyzer_free(t_en_analyzer *x)
 void en_analyzer_analyze(t_en_analyzer *x)
 {
     char *filename;
-    int analysis_exists, response_code, success;
+    int analysis_exists, response_code, success, use_buf_filename;
+    
+    use_buf_filename = 1;
     
     en_analyzer_refresh(x);
     filename = write_soundfile(x);
+    if (!filename || strlen(filename)==0) {
+        post("No file to analyze, stopping.");
+        return;
+    }
     analysis_exists = check_for_existing_analysis(x, filename);
     if (analysis_exists) {
         post("Found existing analysis.");
@@ -227,8 +233,10 @@ void en_analyzer_analyze(t_en_analyzer *x)
             post("Upload failed.");
         }
     }
+    
     post("deleting tempfile");
     remove(filename);
+    
     en_analyzer_global(x);
 }
 
@@ -236,38 +244,38 @@ char *write_soundfile(t_en_analyzer *x)
 {
     SNDFILE	*file;
     SF_INFO	sfinfo;
-    int k;
-    int *buffer;
-    long SAMPLE_COUNT = x->b_bframes;
+
+    unsigned long SAMPLE_COUNT = x->b_buf->b_size;
     char *filename;
 
-    if (! (buffer = malloc (2 * SAMPLE_COUNT * sizeof (int)))){
-        post("Malloc failed.");
-    	return"";
-        }
+    //int k;
+    //float *buffer;
+    //if (! (buffer = malloc (SAMPLE_COUNT * sizeof (float)))){
+    //    post("Malloc failed.");
+    //	return"";
+    //    }
 
     memset(&sfinfo, 0, sizeof(sfinfo));
 
     /* write audio in buffer~ to a tempfile.
     make it mono, 22.5kHz */
     //sfinfo.samplerate	= x->b_msr * 1000;
-    sfinfo.samplerate   = 22500;
-    sfinfo.frames		= SAMPLE_COUNT / 2;
-    sfinfo.channels		= 1;
-    sfinfo.format		= (SF_FORMAT_WAV | SF_FORMAT_PCM_24) ;
+    sfinfo.samplerate   = x->b_buf->b_sr;
+    sfinfo.frames		= x->b_buf->b_frames;
+    sfinfo.channels		= x->b_buf->b_nchans;
+    sfinfo.format		= SF_FORMAT_WAV | SF_FORMAT_PCM_24; 
 
     filename = tempnam("/tmp", "remix");
     strcat(filename, ".wav");
     if (! (file = sf_open(filename, SFM_WRITE, &sfinfo))){
-        post("Error : Not able to open output file.\n");
-    	return"";
-    	}
+        post("Error : %s\n", sf_strerror(file));
+    	return "";
+    }
 
-    for (k = 0 ; k < SAMPLE_COUNT / 2 ; k++)
-    		buffer[k] = AMPLITUDE * x->b_buf->b_samples[k * 2];
+    //for (k = 0 ; k < SAMPLE_COUNT ; k++)
+    //		buffer[k] = AMPLITUDE * x->b_buf->b_samples[k];
 
-    if (sf_write_int(file, buffer, sfinfo.channels * SAMPLE_COUNT / 2) !=
-    										sfinfo.channels * SAMPLE_COUNT / 2)
+    if (sf_write_float(file, x->b_buf->b_samples, SAMPLE_COUNT) != SAMPLE_COUNT)
     	puts(sf_strerror(file));
 
     sf_close(file);
@@ -278,8 +286,8 @@ char *write_soundfile(t_en_analyzer *x)
 int check_for_existing_analysis(t_en_analyzer *x, char *filename)
 {
     FILE *tempfile;
-    unsigned char digest[MD5_DIGEST_LENGTH];
-    char md5_result[MD5_DIGEST_LENGTH * 2 + 1];
+    unsigned char digest[CC_MD5_DIGEST_LENGTH];
+    char md5_result[CC_MD5_DIGEST_LENGTH * 2 + 1];
     int found_analysis;
     
     tempfile = fopen(filename, "r");
@@ -295,13 +303,13 @@ int check_for_existing_analysis(t_en_analyzer *x, char *filename)
 int md5_file(FILE * file, unsigned char *digest)
 {
     unsigned char buf[4096];
-    MD5_CTX c;
+    CC_MD5_CTX c;
     size_t len;
 
-    MD5_Init(&c);
+    CC_MD5_Init(&c);
     while(len = fread(buf, sizeof(buf[0]), sizeof(buf), file))
-        MD5_Update(&c, buf, len);
-    MD5_Final(digest, &c);
+        CC_MD5_Update(&c, buf, len);
+    CC_MD5_Final(digest, &c);
     return !ferror(file);
 }
 

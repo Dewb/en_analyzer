@@ -43,7 +43,7 @@ Contents:
 
 Currently, en_analyzer~ only exists as a universal binary for OS X. Xcode and 
 Visual Studio projects are provided as starting points. If you want to build 
-the object yourself, you'll need the Max 5 SDK, as well as the following 
+the object yourself, you'll need the Max 6 SDK, as well as the following 
 external libraries:
 
 - libcurl – http://curl.haxx.se/
