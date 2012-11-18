@@ -34,6 +34,7 @@ typedef struct _en_analyzer
     void *b_outlet4;
     void *b_outlet5;
     void *b_outlet6;
+    void *b_outlet7;
 	struct json_object *bars;
 	struct json_object *beats;
 	struct json_object *sections;
@@ -88,6 +89,7 @@ void en_analyzer_section(t_en_analyzer *x, t_symbol *s, long argc, t_atom *argv)
 void en_analyzer_tatum(t_en_analyzer *x, t_symbol *s, long argc, t_atom *argv);
 void en_analyzer_quantum(t_en_analyzer *x, struct json_object *quantum_obj, long n);
 void en_analyzer_global(t_en_analyzer *x);
+void en_analyzer_time(t_en_analyzer *x, t_symbol *s, long argc, t_atom *argv);
 void *en_analyzer_new(t_symbol *s, long argc, t_atom *argv);
 
 t_symbol *ps_nothing, *ps_buffer;
@@ -114,6 +116,7 @@ int main(void)
     class_addmethod(c, (method)en_analyzer_section,    "section", A_GIMME, 0);
     class_addmethod(c, (method)en_analyzer_tatum,      "tatum", A_GIMME, 0);
     class_addmethod(c, (method)en_analyzer_global,     "global", 0);
+    class_addmethod(c, (method)en_analyzer_time,       "time", A_GIMME, 0);
     
     CLASS_ATTR_SYM(c, "api_key", 0, t_en_analyzer, api_key);
     
@@ -184,6 +187,9 @@ void en_analyzer_assist(t_en_analyzer *x, void *b, long m, long a, char *s)
 			case 1:	sprintf(s, "Loudness Start in db, Loudness Max Time in sec, Loudness Max in db");	break;
 			case 2:	sprintf(s, "Pitches");	break;
 			case 3:	sprintf(s, "Timbre");	break;
+            case 4: sprintf(s, "Global features"); break;
+            case 5: sprintf(s, "Global rhythmic information"); break;
+            case 6: sprintf(s, "Current song position"); break;
 		}
 	}
 }
@@ -307,7 +313,7 @@ int md5_file(FILE * file, unsigned char *digest)
     size_t len;
 
     CC_MD5_Init(&c);
-    while(len = fread(buf, sizeof(buf[0]), sizeof(buf), file))
+    while((len = fread(buf, sizeof(buf[0]), sizeof(buf), file)))
         CC_MD5_Update(&c, buf, len);
     CC_MD5_Final(digest, &c);
     return !ferror(file);
@@ -799,6 +805,34 @@ void en_analyzer_global(t_en_analyzer *x)
     outlet_list(x->b_outlet5, NULL, 7, global_features);
 }
 
+void en_analyzer_time(t_en_analyzer *x, t_symbol *s, long argc, t_atom *argv)
+{
+    t_atom quanta_idx[5];
+    long current_beat = 0;
+    float current_time = atom_getfloat(argv);
+    float start_eps = 0.001;
+    short i;
+    
+    for (i=0; i < x->n_beats; i++)
+    {
+        struct json_object *beat_obj = json_object_array_get_idx(x->beats, i);
+        struct json_object *start_obj = json_object_object_get(beat_obj, "start");
+        float start = json_object_get_double(start_obj);
+        if (start > current_time + start_eps)
+        {
+            current_beat = i;
+            break;
+        }
+    }
+    
+    atom_setlong(quanta_idx, 0);
+    atom_setlong(quanta_idx + 1, 0);
+    atom_setlong(quanta_idx + 2, current_beat);
+    atom_setlong(quanta_idx + 3, 0);
+    atom_setlong(quanta_idx + 4, 0);
+    outlet_list(x->b_outlet7, NULL, 5, quanta_idx);
+}
+
 void *en_analyzer_new(t_symbol *s, long argc, t_atom *argv)
 {
 	t_en_analyzer *x = ((t_en_analyzer *)object_alloc(en_analyzer_class));
@@ -822,6 +856,7 @@ void *en_analyzer_new(t_symbol *s, long argc, t_atom *argv)
     x->end_of_fade_in = 0;
     x->start_of_fade_out = 0;
 	
+	x->b_outlet7 = outlet_new((t_object *)x, NULL);
 	x->b_outlet6 = outlet_new((t_object *)x, NULL);
 	x->b_outlet5 = outlet_new((t_object *)x, NULL);
 	x->b_outlet4 = outlet_new((t_object *)x, NULL);
