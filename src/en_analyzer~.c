@@ -52,6 +52,11 @@ typedef struct _en_analyzer
     long n_sections;
     long n_segments;
     long n_tatums;
+    float *section_start_times;
+    float *bar_start_times;
+    float *beat_start_times;
+    float *tatum_start_times;
+    float *segment_start_times;
 } t_en_analyzer;
 
 struct MemoryStruct {
@@ -88,6 +93,8 @@ void en_analyzer_beat(t_en_analyzer *x, t_symbol *s, long argc, t_atom *argv);
 void en_analyzer_section(t_en_analyzer *x, t_symbol *s, long argc, t_atom *argv);
 void en_analyzer_tatum(t_en_analyzer *x, t_symbol *s, long argc, t_atom *argv);
 void en_analyzer_quantum(t_en_analyzer *x, struct json_object *quantum_obj, long n);
+float *en_analyzer_create_quantum_property_array(struct json_object *quantums, long n, const char *key);
+void en_analyzer_free_quantum_property_arrays(t_en_analyzer *x);
 void en_analyzer_global(t_en_analyzer *x);
 void en_analyzer_time(t_en_analyzer *x, t_symbol *s, long argc, t_atom *argv);
 void *en_analyzer_new(t_symbol *s, long argc, t_atom *argv);
@@ -100,7 +107,7 @@ int main(void)
 {	
 	t_class *c;
 	
-	c = class_new("en_analyzer~", (method)en_analyzer_new, (method)dsp_free, 
+	c = class_new("en_analyzer~", (method)en_analyzer_new, (method)en_analyzer_free,
 	                (long)sizeof(t_en_analyzer), 0L, A_GIMME, 0);
     
     class_addmethod(c, (method)en_analyzer_analyze,    "analyze", 0);
@@ -203,7 +210,8 @@ void en_analyzer_dblclick(t_en_analyzer *x)
 
 void en_analyzer_free(t_en_analyzer *x)
 {
-	;
+	dsp_free((t_pxobject*)x);
+    en_analyzer_free_quantum_property_arrays(x);
 }
 
 void en_analyzer_analyze(t_en_analyzer *x)
@@ -485,7 +493,14 @@ int get_analysis(t_en_analyzer *x, char *param_name, char *param)
             x->end_of_fade_in = json_object_get_double(value_obj);
             value_obj = json_object_object_get(analysis_obj, "start_of_fade_out");
             x->start_of_fade_out = json_object_get_double(value_obj);
-        
+            
+            en_analyzer_free_quantum_property_arrays(x);
+            x->section_start_times = en_analyzer_create_quantum_property_array(x->sections, x->n_sections, "start");
+            x->bar_start_times = en_analyzer_create_quantum_property_array(x->bars, x->n_bars, "start");
+            x->beat_start_times = en_analyzer_create_quantum_property_array(x->beats, x->n_beats, "start");
+            x->tatum_start_times = en_analyzer_create_quantum_property_array(x->tatums, x->n_tatums, "start");
+            x->segment_start_times = en_analyzer_create_quantum_property_array(x->segments, x->n_segments, "start");
+            
             return 1;
         }
     }
@@ -783,6 +798,37 @@ void en_analyzer_quantum(t_en_analyzer *x, struct json_object *quantum_obj, long
     outlet_list(x->b_outlet1, NULL, 2, start_dur);
 }
 
+float *en_analyzer_create_quantum_property_array(struct json_object *quantums, long n, const char *key)
+{
+    float *arr = malloc(n * sizeof(float));
+    long i;
+    for (i=0; i<n; i++) {
+        struct json_object *quantum_obj = json_object_array_get_idx(quantums, i);
+        struct json_object *start_obj = json_object_object_get(quantum_obj, key);
+        arr[i] = json_object_get_double(start_obj);
+    }
+    return arr;
+}
+
+void en_analyzer_free_quantum_property_arrays(t_en_analyzer *x)
+{
+    if (x->section_start_times) {
+        free(x->section_start_times);
+    }
+    if (x->bar_start_times) {
+        free(x->bar_start_times);
+    }
+    if (x->beat_start_times) {
+        free(x->beat_start_times);
+    }
+    if (x->tatum_start_times) {
+        free(x->tatum_start_times);
+    }
+    if (x->segment_start_times) {
+        free(x->segment_start_times);
+    }
+}
+
 void en_analyzer_global(t_en_analyzer *x)
 {
     t_atom global_features[7];
@@ -805,31 +851,46 @@ void en_analyzer_global(t_en_analyzer *x)
     outlet_list(x->b_outlet5, NULL, 7, global_features);
 }
 
+long binary_search_first_greater_than(float *arr, long n, float val)
+{
+    // return the index of the first item in the list greater than val
+    // if no items are greater than val, returns n (index of last item plus one.)
+    if (n == 0) {
+        return 0;
+    }
+    long low = 0, high = n;
+    while (low != high) {
+        long mid = (low + high)/2;
+        if (arr[mid] <= val) {
+            low = mid + 1;
+        } else {
+            high = mid;
+        }
+    }
+    if (arr[low] <= val) {
+        return low + 1;
+    } else {
+        return low;
+    }
+}
+
 void en_analyzer_time(t_en_analyzer *x, t_symbol *s, long argc, t_atom *argv)
 {
     t_atom quanta_idx[5];
-    long current_beat = 0;
     float current_time = atom_getfloat(argv);
-    float start_eps = 0.001;
-    short i;
+    float eps = 0.001;
+
+    long current_section = binary_search_first_greater_than(x->section_start_times, x->n_sections, current_time);
+    long current_bar = binary_search_first_greater_than(x->bar_start_times, x->n_bars, current_time);
+    long current_beat = binary_search_first_greater_than(x->beat_start_times, x->n_beats, current_time);
+    long current_tatum = binary_search_first_greater_than(x->tatum_start_times, x->n_tatums, current_time);
+    long current_segment = binary_search_first_greater_than(x->segment_start_times, x->n_segments, current_time);
     
-    for (i=0; i < x->n_beats; i++)
-    {
-        struct json_object *beat_obj = json_object_array_get_idx(x->beats, i);
-        struct json_object *start_obj = json_object_object_get(beat_obj, "start");
-        float start = json_object_get_double(start_obj);
-        if (start > current_time + start_eps)
-        {
-            current_beat = i;
-            break;
-        }
-    }
-    
-    atom_setlong(quanta_idx, 0);
-    atom_setlong(quanta_idx + 1, 0);
+    atom_setlong(quanta_idx, current_section);
+    atom_setlong(quanta_idx + 1, current_bar);
     atom_setlong(quanta_idx + 2, current_beat);
-    atom_setlong(quanta_idx + 3, 0);
-    atom_setlong(quanta_idx + 4, 0);
+    atom_setlong(quanta_idx + 3, current_tatum);
+    atom_setlong(quanta_idx + 4, current_segment);
     outlet_list(x->b_outlet7, NULL, 5, quanta_idx);
 }
 
@@ -865,3 +926,5 @@ void *en_analyzer_new(t_symbol *s, long argc, t_atom *argv)
 	x->b_outlet1 = outlet_new((t_object *)x, NULL);
 	return (x);
 }
+
+
