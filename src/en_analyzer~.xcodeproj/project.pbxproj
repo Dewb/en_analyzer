@@ -11,11 +11,11 @@
 		22CF116E0EE9A7700054F513 /* MaxAudioAPI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 22CF116D0EE9A7700054F513 /* MaxAudioAPI.framework */; };
 		2FBBEADE08F335360078DB84 /* MaxAPI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 54266BCE05E6E9780000000C /* MaxAPI.framework */; };
 		5B1B60C11650531300454389 /* en_analyzer~.c in Sources */ = {isa = PBXBuildFile; fileRef = 5B1B60C01650531300454389 /* en_analyzer~.c */; };
-		5B1B60C51650534600454389 /* libjson-c.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5B1B60C21650534600454389 /* libjson-c.dylib */; };
-		5B1B60C61650534600454389 /* libjson.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5B1B60C31650534600454389 /* libjson.dylib */; };
-		5B1B60C71650534600454389 /* libsndfile.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5B1B60C41650534600454389 /* libsndfile.dylib */; };
-		5B1B60CA1650536100454389 /* libcrypto.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5B1B60C81650536100454389 /* libcrypto.dylib */; };
-		5B1B60CB1650536100454389 /* libcurl.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5B1B60C91650536100454389 /* libcurl.dylib */; };
+		5BA099B7165B6A91004185D0 /* libcrypto.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BA099B5165B6A91004185D0 /* libcrypto.dylib */; };
+		5BA099B8165B6A91004185D0 /* libcurl.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BA099B6165B6A91004185D0 /* libcurl.dylib */; };
+		5BA099BC165B6ABD004185D0 /* libjson-c.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BA099B9165B6ABD004185D0 /* libjson-c.dylib */; };
+		5BA099BD165B6ABD004185D0 /* libjson.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BA099BA165B6ABD004185D0 /* libjson.dylib */; };
+		5BA099BE165B6ABD004185D0 /* libsndfile.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BA099BB165B6ABD004185D0 /* libsndfile.dylib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,11 +25,11 @@
 		2FBBEAE508F335360078DB84 /* en_analyzer~.mxo */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "en_analyzer~.mxo"; sourceTree = BUILT_PRODUCTS_DIR; };
 		54266BCE05E6E9780000000C /* MaxAPI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MaxAPI.framework; path = "../../../c74support/max-includes/MaxAPI.framework"; sourceTree = SOURCE_ROOT; };
 		5B1B60C01650531300454389 /* en_analyzer~.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "en_analyzer~.c"; sourceTree = "<group>"; };
-		5B1B60C21650534600454389 /* libjson-c.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libjson-c.dylib"; path = "../../../../../../../usr/local/lib/libjson-c.dylib"; sourceTree = "<group>"; };
-		5B1B60C31650534600454389 /* libjson.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libjson.dylib; path = ../../../../../../../usr/local/lib/libjson.dylib; sourceTree = "<group>"; };
-		5B1B60C41650534600454389 /* libsndfile.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libsndfile.dylib; path = ../../../../../../../usr/local/lib/libsndfile.dylib; sourceTree = "<group>"; };
-		5B1B60C81650536100454389 /* libcrypto.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.dylib; path = ../../../../../../../usr/lib/libcrypto.dylib; sourceTree = "<group>"; };
-		5B1B60C91650536100454389 /* libcurl.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcurl.dylib; path = ../../../../../../../usr/lib/libcurl.dylib; sourceTree = "<group>"; };
+		5BA099B5165B6A91004185D0 /* libcrypto.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.dylib; path = ../../../../../../../usr/lib/libcrypto.dylib; sourceTree = "<group>"; };
+		5BA099B6165B6A91004185D0 /* libcurl.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcurl.dylib; path = ../../../../../../../usr/lib/libcurl.dylib; sourceTree = "<group>"; };
+		5BA099B9165B6ABD004185D0 /* libjson-c.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libjson-c.dylib"; path = "../../../../../../../usr/local/lib/libjson-c.dylib"; sourceTree = "<group>"; };
+		5BA099BA165B6ABD004185D0 /* libjson.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libjson.dylib; path = ../../../../../../../usr/local/lib/libjson.dylib; sourceTree = "<group>"; };
+		5BA099BB165B6ABD004185D0 /* libsndfile.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libsndfile.dylib; path = ../../../../../../../usr/local/lib/libsndfile.dylib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -39,11 +39,11 @@
 			files = (
 				2FBBEADE08F335360078DB84 /* MaxAPI.framework in Frameworks */,
 				22CF116E0EE9A7700054F513 /* MaxAudioAPI.framework in Frameworks */,
-				5B1B60C51650534600454389 /* libjson-c.dylib in Frameworks */,
-				5B1B60C61650534600454389 /* libjson.dylib in Frameworks */,
-				5B1B60C71650534600454389 /* libsndfile.dylib in Frameworks */,
-				5B1B60CA1650536100454389 /* libcrypto.dylib in Frameworks */,
-				5B1B60CB1650536100454389 /* libcurl.dylib in Frameworks */,
+				5BA099B7165B6A91004185D0 /* libcrypto.dylib in Frameworks */,
+				5BA099B8165B6A91004185D0 /* libcurl.dylib in Frameworks */,
+				5BA099BC165B6ABD004185D0 /* libjson-c.dylib in Frameworks */,
+				5BA099BD165B6ABD004185D0 /* libjson.dylib in Frameworks */,
+				5BA099BE165B6ABD004185D0 /* libsndfile.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,11 +65,11 @@
 		089C1671FE841209C02AAC07 /* External Frameworks and Libraries */ = {
 			isa = PBXGroup;
 			children = (
-				5B1B60C81650536100454389 /* libcrypto.dylib */,
-				5B1B60C91650536100454389 /* libcurl.dylib */,
-				5B1B60C21650534600454389 /* libjson-c.dylib */,
-				5B1B60C31650534600454389 /* libjson.dylib */,
-				5B1B60C41650534600454389 /* libsndfile.dylib */,
+				5BA099B5165B6A91004185D0 /* libcrypto.dylib */,
+				5BA099B6165B6A91004185D0 /* libcurl.dylib */,
+				5BA099B9165B6ABD004185D0 /* libjson-c.dylib */,
+				5BA099BA165B6ABD004185D0 /* libjson.dylib */,
+				5BA099BB165B6ABD004185D0 /* libsndfile.dylib */,
 				54266BCE05E6E9780000000C /* MaxAPI.framework */,
 				22CF116D0EE9A7700054F513 /* MaxAudioAPI.framework */,
 			);

@@ -71,7 +71,7 @@ void en_analyzer_length(t_en_analyzer *x, t_buffer *b);
 void en_analyzer_assist(t_en_analyzer *x, void *b, long m, long a, char *s);
 void en_analyzer_dblclick(t_en_analyzer *x);
 void en_analyzer_free(t_en_analyzer *x);
-void en_analyzer_analyze(t_en_analyzer *x);
+void en_analyzer_analyze(t_en_analyzer *x, t_symbol *s, long argc, t_atom *argv);
 char *write_soundfile(t_en_analyzer *x);
 int check_for_existing_analysis(t_en_analyzer *x, char *filename);
 int md5_file(FILE * file, unsigned char *digest);
@@ -110,7 +110,7 @@ int main(void)
 	c = class_new("en_analyzer~", (method)en_analyzer_new, (method)en_analyzer_free,
 	                (long)sizeof(t_en_analyzer), 0L, A_GIMME, 0);
     
-    class_addmethod(c, (method)en_analyzer_analyze,    "analyze", 0);
+    class_addmethod(c, (method)en_analyzer_analyze,    "analyze", A_GIMME, 0);
     class_addmethod(c, (method)en_analyzer_dsp,        "dsp", A_CANT, 0);
     class_addmethod(c, (method)en_analyzer_length,     "length", A_CANT, 0);
     class_addmethod(c, (method)en_analyzer_setup,      "setup", A_CANT, 0);
@@ -214,42 +214,61 @@ void en_analyzer_free(t_en_analyzer *x)
     en_analyzer_free_quantum_property_arrays(x);
 }
 
-void en_analyzer_analyze(t_en_analyzer *x)
+void en_analyzer_analyze(t_en_analyzer *x, t_symbol *s, long argc, t_atom *argv)
 {
     char *filename;
-    int analysis_exists, response_code, success, use_buf_filename;
-    
-    use_buf_filename = 1;
-    
+    int analysis_exists, response_code, success;
+    int retry = 2;
+    bool file_is_temporary = false;
+
     en_analyzer_refresh(x);
-    filename = write_soundfile(x);
+    
+    if (argc == 1) {
+        char *sysname = atom_getsym(argv)->s_name;
+        char *name = malloc((strlen(sysname)+1)*sizeof(char));
+        strcpy(name, sysname);
+        char *drive = strtok(name, ":");
+        filename = strtok(NULL, ":");
+    } else {
+        filename = write_soundfile(x);
+        file_is_temporary = true;
+    }
+    
     if (!filename || strlen(filename)==0) {
         post("No file to analyze, stopping.");
         return;
     }
-    analysis_exists = check_for_existing_analysis(x, filename);
-    if (analysis_exists) {
-        post("Found existing analysis.");
-    }
-    else {
-        post("Analysis not found. Uploading audio for analysis...");
-        response_code = upload(x, filename);
-        if (response_code == 0){
-            success = get_analysis(x, "id", x->track_id);
-            if (success == 1) {
-                post("Analysis retrieved.");
-            }
-            else {
-                post("Couldn't get analysis");
-            }
+    
+    while(retry--) {
+        analysis_exists = check_for_existing_analysis(x, filename);
+        if (analysis_exists) {
+            post("Found existing analysis.");
+            break;
         }
         else {
-            post("Upload failed.");
+            post("Analysis not found. Uploading audio for analysis...");
+            response_code = upload(x, filename);
+            if (response_code == 0){
+                success = get_analysis(x, "id", x->track_id);
+                if (success == 1) {
+                    post("Analysis retrieved.");
+                    break;
+                }
+                else {
+                    post("Couldn't get analysis");
+                }
+            }
+            else {
+                post("Upload failed.");
+            }
         }
+        sleep(6);
     }
     
-    post("deleting tempfile");
-    remove(filename);
+    if (file_is_temporary) {
+        post("deleting tempfile");
+        remove(filename);
+    }
     
     en_analyzer_global(x);
 }
@@ -262,22 +281,13 @@ char *write_soundfile(t_en_analyzer *x)
     unsigned long SAMPLE_COUNT = x->b_buf->b_size;
     char *filename;
 
-    //int k;
-    //float *buffer;
-    //if (! (buffer = malloc (SAMPLE_COUNT * sizeof (float)))){
-    //    post("Malloc failed.");
-    //	return"";
-    //    }
-
     memset(&sfinfo, 0, sizeof(sfinfo));
 
-    /* write audio in buffer~ to a tempfile.
-    make it mono, 22.5kHz */
-    //sfinfo.samplerate	= x->b_msr * 1000;
+    /* write audio in buffer~ to a tempfile. */
     sfinfo.samplerate   = x->b_buf->b_sr;
     sfinfo.frames		= x->b_buf->b_frames;
     sfinfo.channels		= x->b_buf->b_nchans;
-    sfinfo.format		= SF_FORMAT_WAV | SF_FORMAT_PCM_24; 
+    sfinfo.format		= SF_FORMAT_WAV | SF_FORMAT_PCM_16;
 
     filename = tempnam("/tmp", "remix");
     strcat(filename, ".wav");
@@ -286,14 +296,12 @@ char *write_soundfile(t_en_analyzer *x)
     	return "";
     }
 
-    //for (k = 0 ; k < SAMPLE_COUNT ; k++)
-    //		buffer[k] = AMPLITUDE * x->b_buf->b_samples[k];
-
     if (sf_write_float(file, x->b_buf->b_samples, SAMPLE_COUNT) != SAMPLE_COUNT)
-    	puts(sf_strerror(file));
+    	post(sf_strerror(file));
 
     sf_close(file);
-    post("wrote audio to tempfile: %s", filename);
+    post("wrote WAV audio to tempfile: %s", filename);
+    
     return filename;
 }
 
@@ -414,7 +422,9 @@ int upload(t_en_analyzer *x, char *filename)
         /* store the track id as an attribute */
         track_id = get_track_id(response_obj);
         x->track_id = track_id;
+        return response_code;
     }
+    
     return response_code;
 }
 
@@ -453,6 +463,8 @@ int get_analysis(t_en_analyzer *x, char *param_name, char *param)
 {
     char *analysis_url, *analysis_response;
     struct json_object *analysis_obj, *value_obj;
+    float *lmax;
+    long i;
     
     analysis_url = get_analysis_url(x, param_name, param);
     if (analysis_url == "") {
@@ -500,7 +512,7 @@ int get_analysis(t_en_analyzer *x, char *param_name, char *param)
             x->beat_start_times = en_analyzer_create_quantum_property_array(x->beats, x->n_beats, "start");
             x->tatum_start_times = en_analyzer_create_quantum_property_array(x->tatums, x->n_tatums, "start");
             x->segment_start_times = en_analyzer_create_quantum_property_array(x->segments, x->n_segments, "start");
-            
+
             return 1;
         }
     }
@@ -877,9 +889,12 @@ long binary_search_first_greater_than(float *arr, long n, float val)
 void en_analyzer_time(t_en_analyzer *x, t_symbol *s, long argc, t_atom *argv)
 {
     t_atom quanta_idx[5];
+    
+    if (argc < 1)
+        return;
+    
     float current_time = atom_getfloat(argv);
-    float eps = 0.001;
-
+    
     long current_section = binary_search_first_greater_than(x->section_start_times, x->n_sections, current_time);
     long current_bar = binary_search_first_greater_than(x->bar_start_times, x->n_bars, current_time);
     long current_beat = binary_search_first_greater_than(x->beat_start_times, x->n_beats, current_time);
@@ -924,6 +939,7 @@ void *en_analyzer_new(t_symbol *s, long argc, t_atom *argv)
 	x->b_outlet3 = outlet_new((t_object *)x, NULL);
 	x->b_outlet2 = outlet_new((t_object *)x, NULL);
 	x->b_outlet1 = outlet_new((t_object *)x, NULL);
+    
 	return (x);
 }
 
